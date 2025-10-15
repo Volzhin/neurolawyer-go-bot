@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: neurolawyer_go_bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - WEBHOOK_DRIVE=${WEBHOOK_DRIVE}
+      - WEBHOOK_SAMOKATY=${WEBHOOK_SAMOKATY}
+      - DEFAULT_SERVICE=${DEFAULT_SERVICE:-drive}
+      - ADMIN_USER_IDS=${ADMIN_USER_IDS:-}
+      - HTTP_TIMEOUT_SECONDS=${HTTP_TIMEOUT_SECONDS:-25}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - RETRY_BACKOFF_SECS=${RETRY_BACKOFF_SECS:-2}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MAX_CREATIVES_PER_BATCH=${MAX_CREATIVES_PER_BATCH:-10}
+      - BURST_DEBOUNCE_SECS=${BURST_DEBOUNCE_SECS:-2.0}
+      - BURST_HARDCAP_SECS=${BURST_HARDCAP_SECS:-3.5}
+      - WEBHOOK_MODE=${WEBHOOK_MODE:-rich}
+    volumes:
+      - ./data:/app/data
+      - ./config.env:/app/config.env:ro
+    env_file:
+      - config.env
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
