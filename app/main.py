@@ -4,6 +4,7 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 from aiogram.fsm.storage.memory import MemoryStorage
 from app.utils.env import config
 from app.utils.logging import setup_logging, get_logger
@@ -37,6 +38,16 @@ async def main():
     # Инициализируем сервис файлов
     from app.handlers.media import tg_files_service
     tg_files_service.bot = bot
+    
+    # Настраиваем команды бота
+    commands = [
+        BotCommand(command="start", description="🚀 Запустить бота"),
+        BotCommand(command="help", description="ℹ️ Справка по боту"),
+        BotCommand(command="service", description="🔧 Выбрать сервис"),
+        BotCommand(command="status", description="🔍 Статус вебхука")
+    ]
+    await bot.set_my_commands(commands)
+    logger.info("✅ Команды бота настроены")
     
     # Создаем диспетчер с хранилищем FSM
     storage = MemoryStorage()

@@ -13,6 +13,16 @@ router = Router()
 prefs_service = PreferencesService()
 webhook_client = WebhookClient()
 
+
+def get_service_menu() -> InlineKeyboardMarkup:
+    """Создать меню выбора сервиса."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🚗 Drive", callback_data="service_drive"),
+            InlineKeyboardButton(text="🛵 Samokaty", callback_data="service_samokaty")
+        ]
+    ])
+
 @router.message(Command("start"))
 async def cmd_start(message: Message):
     """Обработчик команды /start."""
@@ -21,20 +31,6 @@ async def cmd_start(message: Message):
     
     # Получаем текущий сервис
     current_service = prefs_service.get_user_service(user_id)
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text=f"🚗 Drive {'✅' if current_service == 'drive' else ''}",
-                callback_data="service_drive"
-            ),
-            InlineKeyboardButton(
-                text=f"🛵 Samokaty {'✅' if current_service == 'samokaty' else ''}",
-                callback_data="service_samokaty"
-            )
-        ],
-        [InlineKeyboardButton(text="ℹ️ Помощь", callback_data="help")]
-    ])
     
     text = f"""👋 Привет, {username}!
 
@@ -45,9 +41,9 @@ async def cmd_start(message: Message):
 
 🎯 Текущий сервис: {current_service.title()}
 
-Выберите сервис или отправьте рекламный креатив!"""
+Используйте команды в меню или отправьте рекламный креатив!"""
     
-    await message.answer(text, reply_markup=keyboard)
+    await message.answer(text)
     logger.info(f"✅ Пользователь {user_id} ({username}) запустил бота")
 
 @router.message(Command("help"))
@@ -147,3 +143,4 @@ async def callback_help(callback: CallbackQuery):
     """Обработчик кнопки помощи."""
     await cmd_help(callback.message)
     await callback.answer()
+
