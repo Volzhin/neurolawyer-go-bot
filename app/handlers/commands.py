@@ -66,7 +66,6 @@ async def cmd_help(message: Message):
 • /start - начать работу
 • /service - выбрать сервис
 • /status - проверить статус вебхука
-• /retry - повторить последнюю отправку
 • /help - эта справка
 
 Просто отправьте рекламный креатив, и я перешлю его на выбранный вебхук!"""
@@ -126,24 +125,6 @@ async def cmd_status(message: Message):
     
     logger.info(f"🔍 Пользователь {user_id} проверил статус вебхука {current_service}")
 
-@router.message(Command("retry"))
-async def cmd_retry(message: Message):
-    """Обработчик команды /retry."""
-    user_id = message.from_user.id
-    
-    # Получаем последний payload
-    last_payload_json = prefs_service.get_last_payload(user_id)
-    if not last_payload_json:
-        await message.answer("❌ Нет сохраненных данных для повтора")
-        return
-    
-    await message.answer("🔄 Повторяю отправку последнего payload...")
-    
-    # Здесь должна быть логика повторной отправки
-    # Пока что просто уведомляем
-    await message.answer("⚠️ Функция retry будет реализована в следующей версии")
-    
-    logger.info(f"🔄 Пользователь {user_id} запросил повторную отправку")
 
 @router.callback_query(F.data.startswith("service_"))
 async def callback_service(callback: CallbackQuery):

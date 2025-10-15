@@ -16,7 +16,7 @@ class WebhookClient:
     def __init__(self):
         self.timeout = httpx.Timeout(config.HTTP_TIMEOUT_SECONDS)
         self.max_retries = config.MAX_RETRIES
-        self.retry_backoff = config.RETRY_BACKOFF_SECS
+        self.retry_backoff = 2  # Фиксированная задержка в 2 секунды
     
     async def send_payload(
         self, 

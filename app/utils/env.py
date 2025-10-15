@@ -29,7 +29,6 @@ class Config:
     # HTTP settings
     HTTP_TIMEOUT_SECONDS: int = int(os.getenv("HTTP_TIMEOUT_SECONDS", "25"))
     MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "3"))
-    RETRY_BACKOFF_SECS: int = int(os.getenv("RETRY_BACKOFF_SECS", "2"))
     
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
