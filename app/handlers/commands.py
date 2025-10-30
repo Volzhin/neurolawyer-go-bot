@@ -13,6 +13,9 @@ router = Router()
 prefs_service = PreferencesService()
 webhook_client = WebhookClient()
 
+# Память: последнее информационное сообщение бота на пользователя
+last_info_message_id: dict[int, int] = {}
+
 
 def get_service_menu() -> InlineKeyboardMarkup:
     """Создать меню выбора сервиса."""
@@ -23,22 +26,37 @@ def get_service_menu() -> InlineKeyboardMarkup:
         ]
     ])
 
+
 def build_full_instructions(current_service: str) -> str:
     """Сформировать полные инструкции по всем форматам."""
-    return f"""✅ Сервис: {current_service.title()}
+    return f"""✅ Сервис: {current_service.title()}\n\nКак пользоваться:\n1) Выберите сервис (Drive или Samokaty) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.\n\nПоддерживаемые форматы:\n• 📸 Фото (одиночные и альбомы) — объединяются и батчатся\n• 📝 Тексты (многострочные) — каждая непустая строка как отдельный текст\n• 📊 Excel (.xlsx) — все непустые ячейки со всех листов, первая строка игнорируется\n\nПодсказки:\n• Чтобы сменить сервис: /service\n• Проверить статус вебхука: /status\n"""
 
-Как пользоваться:
-1) Выберите сервис (Drive или Samokaty) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.
 
-Поддерживаемые форматы:
-• 📸 Фото (одиночные и альбомы) — объединяются и батчатся
-• 📝 Тексты (многострочные) — каждая непустая строка как отдельный текст
-• 📊 Excel (.xlsx) — все непустые ячейки со всех листов, первая строка игнорируется
+async def send_instruction(message: Message, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
+    """Обновить предыдущее инфо-сообщение, а при отсутствии — отправить новое.
+    Это устраняет дублирование длинных инструкций в чате.
+    """
+    user_id = message.from_user.id
+    old_id = last_info_message_id.get(user_id)
+    # Пытаемся отредактировать предыдущее сообщение
+    if old_id:
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=old_id,
+                text=text,
+                reply_markup=reply_markup
+            )
+            return
+        except Exception:
+            # Если редактирование не удалось (удалено/устарело) — пошлём новое
+            try:
+                await message.bot.delete_message(chat_id=message.chat.id, message_id=old_id)
+            except Exception:
+                pass
+    sent = await message.answer(text, reply_markup=reply_markup)
+    last_info_message_id[user_id] = sent.message_id
 
-Подсказки:
-• Чтобы сменить сервис: /service
-• Проверить статус вебхука: /status
-"""
 
 @router.message(Command("start"))
 async def cmd_start(message: Message):
@@ -50,9 +68,9 @@ async def cmd_start(message: Message):
     current_service = prefs_service.get_user_service(user_id)
     
     greeting = f"👋 Привет, {username}!\n\nЯ помогу проверить и переслать материалы на выбранный сервис."
-    await message.answer(greeting)
-    await message.answer(build_full_instructions(current_service))
+    await send_instruction(message, greeting + "\n\n" + build_full_instructions(current_service))
     logger.info(f"✅ Пользователь {user_id} ({username}) запустил бота")
+
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
@@ -78,8 +96,9 @@ async def cmd_help(message: Message):
 • /help — эта справка
 """
     
-    await message.answer(text)
+    await send_instruction(message, text)
     logger.info(f"ℹ️ Пользователь {message.from_user.id} запросил справку")
+
 
 @router.message(Command("text"))
 async def cmd_text(message: Message):
@@ -95,8 +114,9 @@ async def cmd_text(message: Message):
 Для текста и Excel используются специальные вебхуки сервиса.
 Вы можете поменять сервис командой /service.
 """
-    await message.answer(text)
+    await send_instruction(message, text)
     logger.info(f"📝 Пользователь {message.from_user.id} открыл инструкцию по текстам")
+
 
 @router.message(Command("service"))
 async def cmd_service(message: Message):
@@ -117,10 +137,10 @@ async def cmd_service(message: Message):
         ]
     ])
     
-    intro = f"🔧 Выбор сервиса\n\nТекущий сервис: {current_service.title()}"
-    await message.answer(intro, reply_markup=keyboard)
-    await message.answer(build_full_instructions(current_service))
+    intro = f"🔧 Выбор сервиса\n\nТекущий сервис: {current_service.title()}\n\n" + build_full_instructions(current_service)
+    await send_instruction(message, intro, reply_markup=keyboard)
     logger.info(f"🔧 Пользователь {user_id} запросил выбор сервиса")
+
 
 @router.message(Command("status"))
 async def cmd_status(message: Message):
@@ -154,14 +174,13 @@ async def callback_service(callback: CallbackQuery):
     prefs_service.set_user_service(user_id, service)
     
     await callback.message.edit_text(
-        f"✅ Сервис изменен на **{service.title()}**\n\nТеперь все креативы будут отправляться на этот вебхук.",
+        f"✅ Сервис изменен на **{service.title()}**\n\n" + build_full_instructions(service),
         reply_markup=None
     )
-    # Вывести инструкции после выбора
-    await callback.message.answer(build_full_instructions(service))
     
     await callback.answer(f"Сервис изменен на {service.title()}")
     logger.info(f"✅ Пользователь {user_id} изменил сервис на {service}")
+
 
 @router.callback_query(F.data == "help")
 async def callback_help(callback: CallbackQuery):

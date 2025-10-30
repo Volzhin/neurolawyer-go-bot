@@ -108,10 +108,12 @@ class WebhookClient:
         texts: list[str],
         webhook_url: str,
         service: str,
+        chat: dict,
+        from_: dict,
         idempotency_key: Optional[str] = None
     ) -> bool:
         """Отправить массив текстов на вебхук."""
-        payload = TextsPayload(service=service, texts=texts)
+        payload = TextsPayload(service=service, texts=texts, chat_id=chat.get("chat_id"), chat=chat, from_=from_)
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "TelegramBot/1.0"
@@ -123,7 +125,7 @@ class WebhookClient:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     response = await client.post(
                         webhook_url,
-                        json=payload.model_dump(),
+                        json=payload.model_dump(by_alias=True),
                         headers=headers
                     )
                     if response.status_code == 200:

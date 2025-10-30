@@ -15,7 +15,6 @@ from app.models.payload import TextsPayload
 from app.utils.env import config
 import httpx
 from io import BytesIO
-from openpyxl import load_workbook
 
 logger = get_logger(__name__)
 router = Router()
@@ -112,7 +111,23 @@ async def handle_texts(message: Message):
         await message.answer("⚠️ Текст не найден для отправки")
         return
     idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
-    ok = await webhook_client.send_texts(texts=texts, webhook_url=webhook_url, service=service, idempotency_key=idem)
+    chat = {
+        "chat_id": message.chat.id,
+        "type": message.chat.type,
+        "title": message.chat.title,
+    }
+    from_ = {
+        "user_id": message.from_user.id,
+        "username": message.from_user.username,
+    }
+    ok = await webhook_client.send_texts(
+        texts=texts,
+        webhook_url=webhook_url,
+        service=service,
+        chat=chat,
+        from_=from_,
+        idempotency_key=idem,
+    )
     if ok:
         await message.answer(f"✅ Отправлено {len(texts)} текстов на {service.title()}")
     else:
@@ -152,8 +167,9 @@ async def handle_excel(message: Message):
         logger.error(f"❌ Ошибка скачивания Excel: {e}")
         await message.answer("❌ Ошибка скачивания файла")
         return
-    # парсим xlsx
+    # парсим xlsx (ленивый импорт openpyxl)
     try:
+        from openpyxl import load_workbook  # type: ignore
         wb = load_workbook(filename=data, read_only=True, data_only=True)
         texts: List[str] = []
         for ws in wb.worksheets:
@@ -176,7 +192,23 @@ async def handle_excel(message: Message):
         await message.answer("⚠️ Не найден текст в Excel")
         return
     idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
-    ok = await webhook_client.send_texts(texts=texts, webhook_url=webhook_url, service=service, idempotency_key=idem)
+    chat = {
+        "chat_id": message.chat.id,
+        "type": message.chat.type,
+        "title": message.chat.title,
+    }
+    from_ = {
+        "user_id": message.from_user.id,
+        "username": message.from_user.username,
+    }
+    ok = await webhook_client.send_texts(
+        texts=texts,
+        webhook_url=webhook_url,
+        service=service,
+        chat=chat,
+        from_=from_,
+        idempotency_key=idem,
+    )
     if ok:
         await message.answer(f"✅ Отправлено {len(texts)} текстов из Excel на {service.title()}")
     else:

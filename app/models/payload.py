@@ -65,7 +65,13 @@ class UrlsOnlyPayload(BaseModel):
     download_urls: List[str]
 
 class TextsPayload(BaseModel):
-    """Payload для отправки массива текстов."""
+    """Payload для отправки массива текстов с контекстом чата."""
     service: str
     source: str = "telegram"
     texts: List[str]
+    chat_id: int
+    chat: ChatInfo
+    from_: UserInfo = Field(alias="from")
+
+    class Config:
+        populate_by_name = True
