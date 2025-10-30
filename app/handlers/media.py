@@ -11,7 +11,11 @@ from app.services.tg_files import TelegramFileService
 from app.services.webhook_client import WebhookClient
 from app.services.prefs import PreferencesService
 from app.models.payload import WebhookPayload, Creative, ChatInfo, UserInfo, MessageInfo, BatchInfo
+from app.models.payload import TextsPayload
 from app.utils.env import config
+import httpx
+from io import BytesIO
+from openpyxl import load_workbook
 
 logger = get_logger(__name__)
 router = Router()
@@ -89,6 +93,94 @@ async def handle_single_photo(message: Message):
     user_timers[user_id] = timer_task
     
     logger.info(f"📎 Добавлено одиночное фото в буфер пользователя {user_id}")
+
+@router.message(F.text)
+async def handle_texts(message: Message):
+    """Обработчик текстовых объявлений.
+    - Разбивает по строкам
+    - Отправляет массив строк на текстовый вебхук выбранного сервиса
+    """
+    user_id = message.from_user.id
+    service = prefs_service.get_user_service(user_id)
+    webhook_url = config.get_text_webhook_url(service)
+    if not webhook_url:
+        await message.answer("❌ Текстовый вебхук не настроен для выбранного сервиса")
+        return
+    lines = [line.strip() for line in (message.text or "").splitlines()]
+    texts = [line for line in lines if line]
+    if not texts:
+        await message.answer("⚠️ Текст не найден для отправки")
+        return
+    idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
+    ok = await webhook_client.send_texts(texts=texts, webhook_url=webhook_url, service=service, idempotency_key=idem)
+    if ok:
+        await message.answer(f"✅ Отправлено {len(texts)} текстов на {service.title()}")
+    else:
+        await message.answer("❌ Не удалось отправить тексты")
+
+@router.message(F.document)
+async def handle_excel(message: Message):
+    """Обработчик Excel-файлов (.xlsx):
+    - Скачивает файл
+    - Собирает все ячейки, кроме первой строки (заголовка), по всем листам
+    - Отправляет массив непустых строк на текстовый вебхук выбранного сервиса
+    """
+    if not message.document:
+        return
+    filename = message.document.file_name or ""
+    mime = message.document.mime_type or ""
+    is_xlsx = filename.lower().endswith(".xlsx") or mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if not is_xlsx:
+        return  # игнорируем прочие документы
+    user_id = message.from_user.id
+    service = prefs_service.get_user_service(user_id)
+    webhook_url = config.get_text_webhook_url(service)
+    if not webhook_url:
+        await message.answer("❌ Текстовый вебхук не настроен для выбранного сервиса")
+        return
+    # получаем URL файла и скачиваем
+    file_url = await tg_files_service.get_file_url(message.document.file_id)
+    if not file_url:
+        await message.answer("❌ Не удалось получить файл")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(config.HTTP_TIMEOUT_SECONDS)) as client:
+            resp = await client.get(file_url)
+            resp.raise_for_status()
+            data = BytesIO(resp.content)
+    except Exception as e:
+        logger.error(f"❌ Ошибка скачивания Excel: {e}")
+        await message.answer("❌ Ошибка скачивания файла")
+        return
+    # парсим xlsx
+    try:
+        wb = load_workbook(filename=data, read_only=True, data_only=True)
+        texts: List[str] = []
+        for ws in wb.worksheets:
+            first = True
+            for row in ws.iter_rows(values_only=True):
+                if first:
+                    first = False
+                    continue  # пропускаем заголовок
+                for cell in row:
+                    if cell is None:
+                        continue
+                    s = str(cell).strip()
+                    if s:
+                        texts.append(s)
+    except Exception as e:
+        logger.error(f"❌ Ошибка обработки Excel: {e}")
+        await message.answer("❌ Ошибка обработки Excel")
+        return
+    if not texts:
+        await message.answer("⚠️ Не найден текст в Excel")
+        return
+    idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
+    ok = await webhook_client.send_texts(texts=texts, webhook_url=webhook_url, service=service, idempotency_key=idem)
+    if ok:
+        await message.answer(f"✅ Отправлено {len(texts)} текстов из Excel на {service.title()}")
+    else:
+        await message.answer("❌ Не удалось отправить тексты из Excel")
 
 async def process_user_buffer_after_delay(user_id: int):
     """Обработать буфер пользователя после задержки."""

@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 import httpx
 from app.utils.env import config
 from app.utils.logging import get_logger
-from app.models.payload import WebhookPayload, UrlsOnlyPayload
+from app.models.payload import WebhookPayload, UrlsOnlyPayload, TextsPayload
 
 logger = get_logger(__name__)
 
@@ -102,3 +102,46 @@ class WebhookClient:
     def generate_idempotency_key(self, batch_id: str, seq: int) -> str:
         """Сгенерировать ключ идемпотентности."""
         return f"{batch_id}.{seq}"
+
+    async def send_texts(
+        self,
+        texts: list[str],
+        webhook_url: str,
+        service: str,
+        idempotency_key: Optional[str] = None
+    ) -> bool:
+        """Отправить массив текстов на вебхук."""
+        payload = TextsPayload(service=service, texts=texts)
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "TelegramBot/1.0"
+        }
+        if idempotency_key:
+            headers["X-Idempotency-Key"] = idempotency_key
+        for attempt in range(self.max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(
+                        webhook_url,
+                        json=payload.model_dump(),
+                        headers=headers
+                    )
+                    if response.status_code == 200:
+                        logger.info(f"✅ Тексты успешно отправлены на {webhook_url}")
+                        return True
+                    else:
+                        logger.warning(
+                            f"⚠️ Неожиданный статус {response.status_code} от {webhook_url}: {response.text}"
+                        )
+            except httpx.TimeoutException:
+                logger.warning(f"⏰ Таймаут при отправке на {webhook_url} (попытка {attempt + 1})")
+            except httpx.RequestError as e:
+                logger.error(f"❌ Ошибка запроса к {webhook_url}: {e}")
+            except Exception as e:
+                logger.error(f"❌ Неожиданная ошибка при отправке на {webhook_url}: {e}")
+            if attempt < self.max_retries:
+                wait_time = self.retry_backoff * (2 ** attempt)
+                logger.info(f"⏳ Повторная попытка через {wait_time}с...")
+                await asyncio.sleep(wait_time)
+        logger.error(f"❌ Не удалось отправить тексты на {webhook_url} после {self.max_retries + 1} попыток")
+        return False

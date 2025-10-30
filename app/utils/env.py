@@ -15,6 +15,9 @@ class Config:
     # Webhooks
     WEBHOOK_DRIVE: str = os.getenv("WEBHOOK_DRIVE", "")
     WEBHOOK_SAMOKATY: str = os.getenv("WEBHOOK_SAMOKATY", "")
+    # Text Webhooks
+    WEBHOOK_DRIVE_TEXT: str = os.getenv("WEBHOOK_DRIVE_TEXT", "")
+    WEBHOOK_SAMOKATY_TEXT: str = os.getenv("WEBHOOK_SAMOKATY_TEXT", "")
     
     # Defaults
     DEFAULT_SERVICE: str = os.getenv("DEFAULT_SERVICE", "drive")
@@ -48,6 +51,15 @@ class Config:
             return cls.WEBHOOK_DRIVE
         elif service == "samokaty":
             return cls.WEBHOOK_SAMOKATY
+        return None
+
+    @classmethod
+    def get_text_webhook_url(cls, service: str) -> Optional[str]:
+        """Получить URL текстового вебхука для сервиса."""
+        if service == "drive":
+            return cls.WEBHOOK_DRIVE_TEXT
+        elif service == "samokaty":
+            return cls.WEBHOOK_SAMOKATY_TEXT
         return None
     
     @classmethod

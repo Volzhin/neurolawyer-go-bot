@@ -63,3 +63,9 @@ class UrlsOnlyPayload(BaseModel):
     service: str
     source: str = "telegram"
     download_urls: List[str]
+
+class TextsPayload(BaseModel):
+    """Payload для отправки массива текстов."""
+    service: str
+    source: str = "telegram"
+    texts: List[str]
