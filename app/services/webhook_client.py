@@ -53,7 +53,7 @@ class WebhookClient:
                         headers=headers
                     )
                     
-                    if response.status_code == 200:
+                    if 200 <= response.status_code < 300:
                         logger.info(f"✅ Payload успешно отправлен на {webhook_url}")
                         return True
                     else:
@@ -88,7 +88,7 @@ class WebhookClient:
                     headers={"Content-Type": "application/json"}
                 )
                 
-                if response.status_code == 200:
+                if 200 <= response.status_code < 300:
                     logger.info(f"✅ Ping успешно отправлен на {webhook_url}")
                     return True
                 else:
@@ -128,7 +128,7 @@ class WebhookClient:
                         json=payload.model_dump(by_alias=True),
                         headers=headers
                     )
-                    if response.status_code == 200:
+                    if 200 <= response.status_code < 300:
                         logger.info(f"✅ Тексты успешно отправлены на {webhook_url}")
                         return True
                     else:
