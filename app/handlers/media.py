@@ -105,6 +105,11 @@ async def handle_texts(message: Message):
     if not webhook_url:
         await message.answer("❌ Текстовый вебхук не настроен для выбранного сервиса")
         return
+    # Пингуем для логов, но не блокируем отправку (prod может возвращать 401/405)
+    try:
+        _ = await webhook_client.send_ping(webhook_url)
+    except Exception:
+        pass
     lines = [line.strip() for line in (message.text or "").splitlines()]
     texts = [line for line in lines if line]
     if not texts:
@@ -191,6 +196,11 @@ async def handle_excel(message: Message):
     if not texts:
         await message.answer("⚠️ Не найден текст в Excel")
         return
+    # Пингуем для логов, но не блокируем отправку
+    try:
+        _ = await webhook_client.send_ping(webhook_url)
+    except Exception:
+        pass
     idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
     chat = {
         "chat_id": message.chat.id,
