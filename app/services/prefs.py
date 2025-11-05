@@ -71,17 +71,22 @@ class PreferencesService:
             user_prefs = session.exec(stmt).first()
             
             if user_prefs:
-                return user_prefs.placement
+                placement = user_prefs.placement
+                logger.debug(f"📍 Placement пользователя {user_id}: {placement}")
+                return placement
+            logger.debug(f"📍 Placement пользователя {user_id}: не найдено (запись не существует)")
             return None
     
     def set_user_placement(self, user_id: int, placement: str) -> None:
         """Установить место размещения для пользователя."""
+        from datetime import datetime
         with get_session() as session:
             stmt = select(UserPrefs).where(UserPrefs.user_id == user_id)
             user_prefs = session.exec(stmt).first()
             
             if user_prefs:
                 user_prefs.placement = placement
+                user_prefs.updated_at = datetime.utcnow()
             else:
                 # Создаем запись с дефолтным сервисом
                 from app.utils.env import config

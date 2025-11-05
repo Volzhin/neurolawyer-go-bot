@@ -62,27 +62,19 @@ def build_full_instructions(current_service: str, current_placement: str | None 
 
 
 async def send_instruction(message: Message, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
-    """Обновить предыдущее инфо-сообщение, а при отсутствии — отправить новое.
-    Это устраняет дублирование длинных инструкций в чате.
+    """Удалить предыдущее инфо-сообщение и отправить новое вниз.
+    Это устраняет дублирование и делает обновление заметным после команды пользователя.
     """
     user_id = message.from_user.id
     old_id = last_info_message_id.get(user_id)
-    # Пытаемся отредактировать предыдущее сообщение
+    # Удаляем предыдущее сообщение, если есть
     if old_id:
         try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=old_id,
-                text=text,
-                reply_markup=reply_markup
-            )
-            return
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=old_id)
         except Exception:
-            # Если редактирование не удалось (удалено/устарело) — пошлём новое
-            try:
-                await message.bot.delete_message(chat_id=message.chat.id, message_id=old_id)
-            except Exception:
-                pass
+            # Игнорируем ошибки (сообщение могло быть удалено или слишком старое)
+            pass
+    # Отправляем новое сообщение вниз (после команды пользователя)
     sent = await message.answer(text, reply_markup=reply_markup)
     last_info_message_id[user_id] = sent.message_id
 
