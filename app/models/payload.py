@@ -54,6 +54,7 @@ class WebhookPayload(BaseModel):
     creatives: List[Creative]
     download_urls: List[str]
     batch: BatchInfo
+    placement: Optional[str] = None  # Место размещения креатива
 
     class Config:
         populate_by_name = True
@@ -72,6 +73,7 @@ class TextsPayload(BaseModel):
     chat_id: int
     chat: ChatInfo
     from_: UserInfo = Field(alias="from")
+    placement: Optional[str] = None  # Место размещения креатива
 
     class Config:
         populate_by_name = True

@@ -2,6 +2,8 @@
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from app.utils.logging import get_logger
 from app.services.prefs import PreferencesService
 from app.services.webhook_client import WebhookClient
@@ -15,6 +17,11 @@ webhook_client = WebhookClient()
 
 # Память: последнее информационное сообщение бота на пользователя
 last_info_message_id: dict[int, int] = {}
+
+
+class PlacementState(StatesGroup):
+    """Состояние ожидания ввода места размещения."""
+    waiting_placement = State()
 
 
 def get_service_menu() -> InlineKeyboardMarkup:
@@ -91,6 +98,7 @@ async def cmd_help(message: Message):
 🔧 Команды:
 • /start — начать работу
 • /service — выбрать сервис (Drive/Samokaty)
+• /placement — установить место размещения креатива
 • /text — инструкция по текстам
 • /status — проверить статус вебхука
 • /help — эта справка
@@ -163,6 +171,46 @@ async def cmd_status(message: Message):
         await message.answer(f"❌ Проблемы с вебхуком {current_service.title()}")
     
     logger.info(f"🔍 Пользователь {user_id} проверил статус вебхука {current_service}")
+
+
+@router.message(Command("placement"))
+async def cmd_placement(message: Message, state: FSMContext):
+    """Обработчик команды /placement - установка места размещения."""
+    user_id = message.from_user.id
+    current_placement = prefs_service.get_user_placement(user_id)
+    
+    text = f"""📍 Место размещения креатива
+
+Текущее место: {current_placement if current_placement else "не установлено"}
+
+Примеры:
+• домик Самокатов в Яндекс Go
+• Телеграм-канал Драйва
+• Instagram аккаунт
+
+Отправьте текст с местом размещения:"""
+    
+    await message.answer(text)
+    await state.set_state(PlacementState.waiting_placement)
+    logger.info(f"📍 Пользователь {user_id} запросил установку места размещения")
+
+
+@router.message(PlacementState.waiting_placement)
+async def handle_placement_input(message: Message, state: FSMContext):
+    """Обработчик ввода места размещения."""
+    user_id = message.from_user.id
+    placement_text = message.text.strip() if message.text else ""
+    
+    if not placement_text:
+        await message.answer("❌ Пустое место размещения не допускается. Отправьте текст.")
+        return
+    
+    # Сохраняем место размещения
+    prefs_service.set_user_placement(user_id, placement_text)
+    
+    await message.answer(f"✅ Место размещения установлено:\n**{placement_text}**")
+    await state.clear()
+    logger.info(f"✅ Пользователь {user_id} установил место размещения: {placement_text}")
 
 
 @router.callback_query(F.data.startswith("service_"))

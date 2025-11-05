@@ -63,3 +63,31 @@ class PreferencesService:
             if last_payload:
                 return last_payload.json_payload
             return None
+    
+    def get_user_placement(self, user_id: int) -> Optional[str]:
+        """Получить место размещения пользователя."""
+        with get_session() as session:
+            stmt = select(UserPrefs).where(UserPrefs.user_id == user_id)
+            user_prefs = session.exec(stmt).first()
+            
+            if user_prefs:
+                return user_prefs.placement
+            return None
+    
+    def set_user_placement(self, user_id: int, placement: str) -> None:
+        """Установить место размещения для пользователя."""
+        with get_session() as session:
+            stmt = select(UserPrefs).where(UserPrefs.user_id == user_id)
+            user_prefs = session.exec(stmt).first()
+            
+            if user_prefs:
+                user_prefs.placement = placement
+            else:
+                # Создаем запись с дефолтным сервисом
+                from app.utils.env import config
+                default_service = config.DEFAULT_SERVICE
+                user_prefs = UserPrefs(user_id=user_id, service=default_service, placement=placement)
+                session.add(user_prefs)
+            
+            session.commit()
+            logger.info(f"✅ Место размещения пользователя {user_id} установлено: {placement}")

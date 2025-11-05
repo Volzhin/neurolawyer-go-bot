@@ -10,6 +10,7 @@ class UserPrefs(SQLModel, table=True):
     
     user_id: int = Field(primary_key=True)
     service: str = Field(default="drive")
+    placement: Optional[str] = Field(default=None)  # Место размещения креатива
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 class LastPayload(SQLModel, table=True):

@@ -2,7 +2,7 @@
 import asyncio
 import json
 import uuid
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.types import Message
@@ -116,6 +116,7 @@ async def handle_texts(message: Message):
         await message.answer("⚠️ Текст не найден для отправки")
         return
     idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
+    placement = prefs_service.get_user_placement(user_id)
     chat = {
         "chat_id": message.chat.id,
         "type": message.chat.type,
@@ -131,6 +132,7 @@ async def handle_texts(message: Message):
         service=service,
         chat=chat,
         from_=from_,
+        placement=placement,
         idempotency_key=idem,
     )
     if ok:
@@ -202,6 +204,7 @@ async def handle_excel(message: Message):
     except Exception:
         pass
     idem = webhook_client.generate_idempotency_key(str(message.message_id), 1)
+    placement = prefs_service.get_user_placement(user_id)
     chat = {
         "chat_id": message.chat.id,
         "type": message.chat.type,
@@ -217,6 +220,7 @@ async def handle_excel(message: Message):
         service=service,
         chat=chat,
         from_=from_,
+        placement=placement,
         idempotency_key=idem,
     )
     if ok:
@@ -247,6 +251,7 @@ async def process_messages_batch(messages: List[Message], user_id: int, grouping
     
     # Получаем сервис пользователя
     service = prefs_service.get_user_service(user_id)
+    placement = prefs_service.get_user_placement(user_id)
     webhook_url = config.get_webhook_url(service)
     
     if not webhook_url:
@@ -282,7 +287,8 @@ async def process_messages_batch(messages: List[Message], user_id: int, grouping
             batch_id=batch_id,
             seq=seq,
             total=len(chunks),
-            grouping=grouping
+            grouping=grouping,
+            placement=placement
         )
         
         # Отправляем на вебхук
@@ -308,7 +314,8 @@ def create_webhook_payload(
     batch_id: str,
     seq: int,
     total: int,
-    grouping: str
+    grouping: str,
+    placement: Optional[str] = None
 ) -> WebhookPayload:
     """Создать payload для вебхука."""
     first_message = messages[0]
@@ -352,5 +359,6 @@ def create_webhook_payload(
         message_ids=message_ids,
         creatives=creatives,
         download_urls=download_urls,
-        batch=batch_info
+        batch=batch_info,
+        placement=placement
     )

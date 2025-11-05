@@ -44,6 +44,7 @@ async def main():
         BotCommand(command="start", description="🚀 Запустить бота"),
         BotCommand(command="help", description="ℹ️ Справка по боту"),
         BotCommand(command="service", description="🔧 Выбрать сервис"),
+        BotCommand(command="placement", description="📍 Место размещения"),
         BotCommand(command="text", description="📝 Инструкция по текстам"),
         BotCommand(command="status", description="🔍 Статус вебхука")
     ]

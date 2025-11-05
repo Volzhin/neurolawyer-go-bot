@@ -110,10 +110,18 @@ class WebhookClient:
         service: str,
         chat: dict,
         from_: dict,
+        placement: Optional[str] = None,
         idempotency_key: Optional[str] = None
     ) -> bool:
         """Отправить массив текстов на вебхук."""
-        payload = TextsPayload(service=service, texts=texts, chat_id=chat.get("chat_id"), chat=chat, from_=from_)
+        payload = TextsPayload(
+            service=service, 
+            texts=texts, 
+            chat_id=chat.get("chat_id"), 
+            chat=chat, 
+            from_=from_,
+            placement=placement
+        )
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "TelegramBot/1.0"
