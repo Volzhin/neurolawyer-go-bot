@@ -34,9 +34,31 @@ def get_service_menu() -> InlineKeyboardMarkup:
     ])
 
 
-def build_full_instructions(current_service: str) -> str:
+def build_full_instructions(current_service: str, current_placement: str | None = None) -> str:
     """Сформировать полные инструкции по всем форматам."""
-    return f"""✅ Сервис: {current_service.title()}\n\nКак пользоваться:\n1) Выберите сервис (Drive или Samokaty) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.\n\nПоддерживаемые форматы:\n• 📸 Фото (одиночные и альбомы) — объединяются и батчатся\n• 📝 Тексты (многострочные) — каждая непустая строка как отдельный текст\n• 📊 Excel (.xlsx) — все непустые ячейки со всех листов, первая строка игнорируется\n\nПодсказки:\n• Чтобы сменить сервис: /service\n• Проверить статус вебхука: /status\n"""
+    placement_text = current_placement if current_placement else "не установлено"
+    return f"""✅ Сервис: {current_service.title()}
+📍 Место размещения: {placement_text}
+
+Как пользоваться:
+1) Выберите сервис (Drive или Samokaty) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.
+
+Поддерживаемые форматы:
+• 📸 Фото (одиночные и альбомы) — объединяются и батчатся
+• 📝 Тексты (многострочные) — каждая непустая строка как отдельный текст
+• 📊 Excel (.xlsx) — все непустые ячейки со всех листов, первая строка игнорируется
+
+📝 Инструкция по текстам:
+• Отправьте многострочный текст — каждая непустая строка уйдёт как отдельный текст
+• Пришлите Excel (.xlsx) — соберём все непустые ячейки по всем листам, игнорируя первую строку
+
+Для текста и Excel используются специальные вебхуки сервиса.
+
+Подсказки:
+• Чтобы сменить сервис: /service
+• Чтобы изменить место размещения: /placement
+• Проверить статус вебхука: /status
+"""
 
 
 async def send_instruction(message: Message, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
@@ -71,11 +93,12 @@ async def cmd_start(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username or "пользователь"
     
-    # Получаем текущий сервис
+    # Получаем текущий сервис и место размещения
     current_service = prefs_service.get_user_service(user_id)
+    current_placement = prefs_service.get_user_placement(user_id)
     
     greeting = f"👋 Привет, {username}!\n\nЯ помогу проверить и переслать материалы на выбранный сервис."
-    await send_instruction(message, greeting + "\n\n" + build_full_instructions(current_service))
+    await send_instruction(message, greeting + "\n\n" + build_full_instructions(current_service, current_placement))
     logger.info(f"✅ Пользователь {user_id} ({username}) запустил бота")
 
 
@@ -131,6 +154,7 @@ async def cmd_service(message: Message):
     """Обработчик команды /service."""
     user_id = message.from_user.id
     current_service = prefs_service.get_user_service(user_id)
+    current_placement = prefs_service.get_user_placement(user_id)
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -145,7 +169,7 @@ async def cmd_service(message: Message):
         ]
     ])
     
-    intro = f"🔧 Выбор сервиса\n\nТекущий сервис: {current_service.title()}\n\n" + build_full_instructions(current_service)
+    intro = f"🔧 Выбор сервиса\n\nТекущий сервис: {current_service.title()}\n\n" + build_full_instructions(current_service, current_placement)
     await send_instruction(message, intro, reply_markup=keyboard)
     logger.info(f"🔧 Пользователь {user_id} запросил выбор сервиса")
 
@@ -208,7 +232,11 @@ async def handle_placement_input(message: Message, state: FSMContext):
     # Сохраняем место размещения
     prefs_service.set_user_placement(user_id, placement_text)
     
+    # Получаем текущий сервис для показа обновленных инструкций
+    current_service = prefs_service.get_user_service(user_id)
+    
     await message.answer(f"✅ Место размещения установлено:\n**{placement_text}**")
+    await send_instruction(message, build_full_instructions(current_service, placement_text))
     await state.clear()
     logger.info(f"✅ Пользователь {user_id} установил место размещения: {placement_text}")
 
@@ -220,9 +248,10 @@ async def callback_service(callback: CallbackQuery):
     service = callback.data.split("_")[1]
     
     prefs_service.set_user_service(user_id, service)
+    current_placement = prefs_service.get_user_placement(user_id)
     
     await callback.message.edit_text(
-        f"✅ Сервис изменен на **{service.title()}**\n\n" + build_full_instructions(service),
+        f"✅ Сервис изменен на **{service.title()}**\n\n" + build_full_instructions(service, current_placement),
         reply_markup=None
     )
     
