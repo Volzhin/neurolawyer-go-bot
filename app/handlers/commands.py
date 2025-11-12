@@ -29,7 +29,8 @@ def get_service_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🚗 Drive", callback_data="service_drive"),
-            InlineKeyboardButton(text="🛵 Samokaty", callback_data="service_samokaty")
+            InlineKeyboardButton(text="🛵 Samokaty", callback_data="service_samokaty"),
+            InlineKeyboardButton(text="🚲 Prokat", callback_data="service_prokat")
         ]
     ])
 
@@ -41,7 +42,7 @@ def build_full_instructions(current_service: str, current_placement: str | None 
 📍 Место размещения: {placement_text}
 
 Как пользоваться:
-1) Выберите сервис (Drive или Samokaty) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.
+1) Выберите сервис (Drive, Samokaty или Prokat) — и просто отправляйте материалы. Бот сам определит тип и отправит на нужный вебхук.
 
 Поддерживаемые форматы:
 • 📸 Фото (одиночные и альбомы) — объединяются и батчатся
@@ -112,7 +113,7 @@ async def cmd_help(message: Message):
 
 🔧 Команды:
 • /start — начать работу
-• /service — выбрать сервис (Drive/Samokaty)
+• /service — выбрать сервис (Drive/Samokaty/Prokat)
 • /placement — установить место размещения креатива
 • /text — инструкция по текстам
 • /status — проверить статус вебхука
@@ -157,6 +158,10 @@ async def cmd_service(message: Message):
             InlineKeyboardButton(
                 text=f"🛵 Samokaty {'✅' if current_service == 'samokaty' else ''}",
                 callback_data="service_samokaty"
+            ),
+            InlineKeyboardButton(
+                text=f"🚲 Prokat {'✅' if current_service == 'prokat' else ''}",
+                callback_data="service_prokat"
             )
         ]
     ])

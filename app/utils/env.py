@@ -15,9 +15,11 @@ class Config:
     # Webhooks
     WEBHOOK_DRIVE: str = os.getenv("WEBHOOK_DRIVE", "")
     WEBHOOK_SAMOKATY: str = os.getenv("WEBHOOK_SAMOKATY", "")
+    WEBHOOK_PROKAT: str = os.getenv("WEBHOOK_PROKAT", "")
     # Text Webhooks
     WEBHOOK_DRIVE_TEXT: str = os.getenv("WEBHOOK_DRIVE_TEXT", "")
     WEBHOOK_SAMOKATY_TEXT: str = os.getenv("WEBHOOK_SAMOKATY_TEXT", "")
+    WEBHOOK_PROKAT_TEXT: str = os.getenv("WEBHOOK_PROKAT_TEXT", "")
     
     # Defaults
     DEFAULT_SERVICE: str = os.getenv("DEFAULT_SERVICE", "drive")
@@ -51,6 +53,8 @@ class Config:
             return cls.WEBHOOK_DRIVE
         elif service == "samokaty":
             return cls.WEBHOOK_SAMOKATY
+        elif service == "prokat":
+            return cls.WEBHOOK_PROKAT
         return None
 
     @classmethod
@@ -60,6 +64,8 @@ class Config:
             return cls.WEBHOOK_DRIVE_TEXT
         elif service == "samokaty":
             return cls.WEBHOOK_SAMOKATY_TEXT
+        elif service == "prokat":
+            return cls.WEBHOOK_PROKAT_TEXT
         return None
     
     @classmethod
@@ -71,6 +77,8 @@ class Config:
             raise ValueError("WEBHOOK_DRIVE не установлен")
         if not cls.WEBHOOK_SAMOKATY:
             raise ValueError("WEBHOOK_SAMOKATY не установлен")
+        if not cls.WEBHOOK_PROKAT:
+            raise ValueError("WEBHOOK_PROKAT не установлен")
         return True
 
 # Создаем глобальный экземпляр конфигурации

@@ -38,14 +38,15 @@ python -m pytest tests/
 В файле `config.env` обязательно укажите:
 
 - `TELEGRAM_BOT_TOKEN` - токен вашего бота
-- `WEBHOOK_DRIVE` - URL вебхука для Drive  
-- `WEBHOOK_SAMOKATY` - URL вебхука для Samokaty
+- `WEBHOOK_DRIVE` / `WEBHOOK_DRIVE_TEXT` - вебхуки Drive (медиа и тексты)
+- `WEBHOOK_SAMOKATY` / `WEBHOOK_SAMOKATY_TEXT` - вебхуки Samokaty
+- `WEBHOOK_PROKAT` / `WEBHOOK_PROKAT_TEXT` - вебхуки Prokat
 
 ## 🤖 Команды бота
 
 - `/start` - начать работу
 - `/help` - справка
-- `/service` - выбрать сервис
+- `/service` - выбрать сервис (Drive/Samokaty/Prokat)
 - `/status` - проверить статус
 
 ## 📊 Поддерживаемые типы
